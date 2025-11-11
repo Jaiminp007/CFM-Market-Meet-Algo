@@ -61,3 +61,27 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# calculating beta function
+def compute_beta(ticker, benchmark="^GSPC", start="2025-01-01", end="2025-11-21"):
+    # Download prices
+    data = yf.download([ticker, benchmark], start=start, end=end)["Close"]
+    
+    # Compute daily returns
+    rets = data.pct_change().dropna()
+    
+    # Extract series
+    stock_ret = rets[ticker]
+    bench_ret = rets[benchmark]
+    
+    # Compute covariance(stock, market) / variance(market)
+    cov = np.cov(stock_ret, bench_ret)[0][1]
+    var = np.var(bench_ret)
+    
+    beta = cov / var
+    return beta
+
+print(compute_beta("AAPL"))
+
+
+
