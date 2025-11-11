@@ -41,19 +41,15 @@ def check_ticker(list):
 
         # For Companies in S&P 500/TSX, add them to the final list
         market_of_ticker = stock.info.get("market")
-        print(market_of_ticker)
         if market_of_ticker not in ["us_market", "ca_market"]:
             invalid_tickers.append(ticker)
             valid_tickers.remove(ticker)
             continue
 
-        #Calculate beta and filter it out
-
     return valid_tickers, invalid_tickers
 
-
 def main():
-    tickers_list = read_csv("Test.csv")
+    tickers_list = read_csv("Tickers.csv")
     valid, invalid = check_ticker(tickers_list)
 
     print("Valid:", valid)
