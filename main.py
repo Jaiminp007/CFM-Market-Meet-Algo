@@ -82,29 +82,44 @@ def check_ticker(list):
 
     return valid_tickers, invalid_tickers
 
-def beta_calculate(valid_tickers):
-    benchmark="^GSPC"
+def score_data(valid_tickers):
     start="2025-05-15"
     end="2025-11-15"
-    valid_stocks_with_beta = []
-    for i in valid_tickers:
-        data = yf.download([i,benchmark], start=start, end=end)["Close"]
 
+    def blended_benchmark(start, end):
+        data = yf.download(["^GSPC", "^GSPTSE"], start=start, end=end)["Close"]
         rets = data.pct_change().dropna()
+        blended = rets.mean(axis=1)
+        return blended.rename("Benchmark")
+    
 
-        stock_ret = rets[i]
-        bench_ret = rets[benchmark]
-
-        cov = np.cov(stock_ret, bench_ret)[0][1]
-        var = np.var(bench_ret)
-
-        beta = cov / var
-        valid_stocks_with_beta .append([i,float(np.round(beta, 5))])
-    return valid_stocks_with_beta
+    valid_stocks_with_data = []
+    bench = blended_benchmark(start, end)
 
 
-def beta_filtration(valid_tickers):
-    x = beta_calculate(valid_tickers)
+    for i in valid_tickers:
+        stock_ret = yf.download(i, start=start, end=end)["Close"].pct_change().dropna()
+        stock_ret.name = i 
+        df = pd.concat([stock_ret, bench], axis=1).dropna()
+        if len(df) < 5:
+            continue
+
+        # Beta Calculation
+        beta = df[i].cov(df["Benchmark"]) / df["Benchmark"].var()
+
+        var_bench = df["Benchmark"].var()
+        if var_bench == 0 or np.isnan(var_bench):
+            continue
+
+        corr = df[i].corr(df["Benchmark"])
+
+        valid_stocks_with_data.append([i, {'Beta': float(np.round(beta, 5)), 'Correlation': float(np.round(corr, 5))}])
+        
+    return valid_stocks_with_data
+
+
+'''def beta_filtration(valid_tickers):
+    x = score_calculate(valid_tickers)
     final = []
     remaining = []
     for i in x:
@@ -112,14 +127,14 @@ def beta_filtration(valid_tickers):
             final.append(i)
         else:
             remaining.append(i)
-    return remaining, final
+    return remaining, final'''
 
 
 def main():
     tickers_list = read_csv("Tickers.csv")
     valid, invalid = check_ticker(tickers_list)
 
-    x,y = beta_filtration(valid)
+    x = score_data(valid)
 
     print("Valid:", valid)
     print()
@@ -128,9 +143,7 @@ def main():
     print()
 
     print(x)
-
     print()
-    print(y)
 
 if __name__ == "__main__":
     main()
