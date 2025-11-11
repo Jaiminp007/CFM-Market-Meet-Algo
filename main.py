@@ -48,36 +48,55 @@ def check_ticker(list):
 
     return valid_tickers, invalid_tickers
 
+def beta_calculate(valid_tickers):
+    benchmark="^GSPC"
+    start="2025-05-15"
+    end="2025-11-15"
+    valid_stocks_with_beta = []
+    for i in valid_tickers:
+        data = yf.download([i,benchmark], start=start, end=end)["Close"]
+
+        rets = data.pct_change().dropna()
+
+        stock_ret = rets[i]
+        bench_ret = rets[benchmark]
+
+        cov = np.cov(stock_ret, bench_ret)[0][1]
+        var = np.var(bench_ret)
+
+        beta = cov / var
+        valid_stocks_with_beta .append([i,float(np.round(beta, 5))])
+    return valid_stocks_with_beta
+
+
+def beta_filtration(valid_tickers):
+    x = beta_calculate(valid_tickers)
+    final = []
+    for i in x:
+        if i[1] > 0.8 or i[1] < 1.2:
+            x.remove(i)
+            final.append(i)
+    return x, final
+
+
 def main():
     tickers_list = read_csv("Tickers.csv")
     valid, invalid = check_ticker(tickers_list)
 
+    x,y = beta_filtration(valid)
+
     print("Valid:", valid)
+    print()
+    
     print("Invalid:", invalid)
+    print()
+
+    print(x)
+    print()
+    print(y)
 
 if __name__ == "__main__":
     main()
-
-# calculating beta function
-def compute_beta(ticker, benchmark="^GSPC", start="2025-01-01", end="2025-11-21"):
-    # Download prices
-    data = yf.download([ticker, benchmark], start=start, end=end)["Close"]
-    
-    # Compute daily returns
-    rets = data.pct_change().dropna()
-    
-    # Extract series
-    stock_ret = rets[ticker]
-    bench_ret = rets[benchmark]
-    
-    # Compute covariance(stock, market) / variance(market)
-    cov = np.cov(stock_ret, bench_ret)[0][1]
-    var = np.var(bench_ret)
-    
-    beta = cov / var
-    return beta
-
-print(compute_beta("AAPL"))
 
 
 
