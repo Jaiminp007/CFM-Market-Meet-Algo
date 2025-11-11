@@ -72,11 +72,13 @@ def beta_calculate(valid_tickers):
 def beta_filtration(valid_tickers):
     x = beta_calculate(valid_tickers)
     final = []
+    remaining = []
     for i in x:
-        if i[1] > 0.8 or i[1] < 1.2:
-            x.remove(i)
+        if 0.8 <= i[1] <= 1.2:
             final.append(i)
-    return x, final
+        else:
+            remaining.append(i)
+    return remaining, final
 
 
 def main():
