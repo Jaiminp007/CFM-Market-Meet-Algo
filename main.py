@@ -61,13 +61,13 @@ def blended_benchmark(start, end):
     blended = rets.mean(axis=1)
     return blended.rename("Benchmark")
 
-# Function to determine the score 
+# Function that takes a list of valid 
 
 def score_data(valid_tickers):
     start="2025-05-15"
     end="2025-11-15"
 
-    # Function to get sector and other info from stock ticker
+# Function to get sector and other info from stock ticker
     def get_sector_safe(ticker):
         try:
             info = yf.Ticker(ticker).get_info()  
@@ -80,16 +80,20 @@ def score_data(valid_tickers):
             or "Unknown"
         )
         return sector
-    
+
+    # Empty lists to store results for each ticker
+    # Then generates the blended benchmark
     valid_stocks_with_data = []
     bench = blended_benchmark(start, end)
 
 # Formula for converting the daily volatility to the annual volatility
     bench_vol_ann = float(bench.std() * np.sqrt(252))
     if not np.isfinite(bench_vol_ann) or bench_vol_ann <= 0:
-        bench_vol_ann = np.nan # If 
-    
-    window = 63
+        bench_vol_ann = np.nan # If the value is invalid, it's replaced with np.nan
+   
+    # Sets the number of days in the rolling window (as we have a rolling beta and rolling correlation)
+    # to roughly 3 trading months
+    window = 63 
 
     for i in valid_tickers:
         stock_ret = yf.download(i, start=start, end=end, auto_adjust=True)["Close"].pct_change().dropna()
