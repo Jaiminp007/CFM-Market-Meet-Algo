@@ -65,7 +65,7 @@ def blended_benchmark(start, end):
     blended = rets.mean(axis=1)
     return blended.rename("Benchmark")
 
-# 
+# Function to determine the score 
 
 def score_data(valid_tickers):
     start="2025-05-15"
@@ -88,10 +88,10 @@ def score_data(valid_tickers):
     valid_stocks_with_data = []
     bench = blended_benchmark(start, end)
 
-
+# Formula for converting the daily volatility to the annual volatility
     bench_vol_ann = float(bench.std() * np.sqrt(252))
     if not np.isfinite(bench_vol_ann) or bench_vol_ann <= 0:
-        bench_vol_ann = np.nan
+        bench_vol_ann = np.nan # If 
     
     window = 63
 
