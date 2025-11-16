@@ -232,7 +232,7 @@ def rebalance_currency_mix(final, target_ratio=0.5, tolerance=0.1):
 
     return dict(sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True))
 
-def apply_risk_constraints(final, max_position=10.0, max_sector=35.0, max_iters=10):
+def apply_risk_constraints(final, max_position=15.0, max_sector=35.0, max_iters=50):
     if not final:
         return final
     for _ in range(max_iters):
@@ -280,10 +280,33 @@ def limit_portfolio_size(final, max_size=25, min_size=10):
         norm = 100.0 / total
         for t in trimmed:
             trimmed[t]["Weight_Percent"] = float(np.round(trimmed[t]["Weight_Percent"] * norm, 5))
-    trimmed = apply_risk_constraints(trimmed, max_position=10.0, max_sector=35.0)
+    trimmed = apply_risk_constraints(trimmed, max_position=15.0, max_sector=35.0)
     trimmed = rebalance_currency_mix(trimmed)
 
     return trimmed
+
+def enforce_min_weight(final):
+    if not final:
+        return final
+    
+    n = len(final)
+    min_weight = 100.0 / (2 * n)
+    
+    # Remove stocks below minimum weight
+    to_remove = [t for t, d in final.items() if d["Weight_Percent"] < min_weight]
+    
+    for ticker in to_remove:
+        del final[ticker]
+    
+    # Renormalize if we removed anything
+    if to_remove:
+        total = sum(v["Weight_Percent"] for v in final.values())
+        if total > 0:
+            norm = 100.0 / total
+            for t in final:
+                final[t]["Weight_Percent"] = float(np.round(final[t]["Weight_Percent"] * norm, 5))
+    
+    return dict(sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True))
 
 def market_cap_filtering(final, scored_data):
     if not final:
@@ -382,17 +405,19 @@ def score_calculate(valid_tickers):
 
     final = rebalance_currency_mix(final)
 
+    final = market_cap_filtering(final, x)
+
     final = limit_portfolio_size(final, max_size=25, min_size=10)
 
-    final = apply_risk_constraints(final, max_position=10.0, max_sector=35.0)
-
-    final = market_cap_filtering(final, x)
+    final = enforce_min_weight(final)
+    
+    final = apply_risk_constraints(final, max_position=15.0, max_sector=35.0)
 
     return final
 
 
 def main():
-    tickers_list = read_csv("Tickers.csv")
+    tickers_list = read_csv("Test.csv")
     valid, invalid = check_ticker(tickers_list)
 
     x = score_calculate(valid)

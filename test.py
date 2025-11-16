@@ -74,35 +74,7 @@ def test_portfolio_vs_benchmark(final, start="2025-11-01", end="2025-11-15"):
 # ============================================================
 # 3. YOUR PORTFOLIO (paste anything here)
 # ============================================================
-portfolio = {
-    'T.TO': {'Score': 0.56972, 'Weight_Percent': 10.00001, 'Sector': 'Communication Services'},
-    'BB.TO': {'Score': 0.34352, 'Weight_Percent': 10.00001, 'Sector': 'Technology'},
-    'RY.TO': {'Score': 0.71168, 'Weight_Percent': 9.15758, 'Sector': 'Financial Services'},
-    'TD.TO': {'Score': 0.66958, 'Weight_Percent': 9.15758, 'Sector': 'Financial Services'},
-    'SHOP.TO': {'Score': 0.24392, 'Weight_Percent': 8.47683, 'Sector': 'Technology'},
-    'UNP': {'Score': 0.61701, 'Weight_Percent': 3.40706, 'Sector': 'Industrials'},
-    'AAPL': {'Score': 0.55528, 'Weight_Percent': 3.06618, 'Sector': 'Technology'},
-    'ACN': {'Score': 0.50332, 'Weight_Percent': 2.77927, 'Sector': 'Technology'},
-    'ABT': {'Score': 0.49899, 'Weight_Percent': 2.75537, 'Sector': 'Healthcare'},
-    'PEP': {'Score': 0.49844, 'Weight_Percent': 2.7523,  'Sector': 'Consumer Defensive'},
-    'BK': {'Score': 0.6673,  'Weight_Percent': 2.74063, 'Sector': 'Financial Services'},
-    'LMT': {'Score': 0.49517, 'Weight_Percent': 2.73426, 'Sector': 'Industrials'},
-    'PG': {'Score': 0.55431, 'Weight_Percent': 2.72625, 'Sector': 'Consumer Defensive'},
-    'CL': {'Score': 0.53219, 'Weight_Percent': 2.72625, 'Sector': 'Consumer Defensive'},
-    'ABBV': {'Score': 0.50152, 'Weight_Percent': 2.72625, 'Sector': 'Healthcare'},
-    'KO': {'Score': 0.4934,  'Weight_Percent': 2.72452, 'Sector': 'Consumer Defensive'},
-    'BA': {'Score': 0.49328, 'Weight_Percent': 2.72383, 'Sector': 'Industrials'},
-    'PFE': {'Score': 0.49158, 'Weight_Percent': 2.71444, 'Sector': 'Healthcare'},
-    'BMY': {'Score': 0.48663, 'Weight_Percent': 2.68713, 'Sector': 'Healthcare'},
-    'BAC': {'Score': 0.60402, 'Weight_Percent': 2.48071, 'Sector': 'Financial Services'},
-    'USB': {'Score': 0.58776, 'Weight_Percent': 2.41394, 'Sector': 'Financial Services'},
-    'BLK': {'Score': 0.56864, 'Weight_Percent': 2.33541, 'Sector': 'Financial Services'},
-    'AIG': {'Score': 0.55707, 'Weight_Percent': 2.2879,  'Sector': 'Financial Services'},
-    'C':   {'Score': 0.53974, 'Weight_Percent': 2.21669, 'Sector': 'Financial Services'},
-    'AXP': {'Score': 0.53801, 'Weight_Percent': 2.20961, 'Sector': 'Financial Services'},
-    'GTII': {'Score': 0.5, 'Weight_Percent': 0.0, 'Sector': 'Industrials'}
-}
-
+portfolio = {'CNQ.TO': {'Score': 0.52084, 'Weight_Percent': 15.00001, 'Sector': 'Energy'}, 'RY.TO': {'Score': 0.71168, 'Weight_Percent': 12.57558, 'Sector': 'Financial Services'}, 'TD.TO': {'Score': 0.66958, 'Weight_Percent': 12.57558, 'Sector': 'Financial Services'}, 'SHOP.TO': {'Score': 0.24392, 'Weight_Percent': 7.70143, 'Sector': 'Technology'}, 'MSFT': {'Score': 0.63964, 'Weight_Percent': 7.47116, 'Sector': 'Technology'}, 'AAPL': {'Score': 0.55528, 'Weight_Percent': 6.48581, 'Sector': 'Technology'}, 'CVX': {'Score': 0.52529, 'Weight_Percent': 6.13553, 'Sector': 'Energy'}, 'GOOGL': {'Score': 0.49882, 'Weight_Percent': 5.82633, 'Sector': 'Communication Services'}, 'XOM': {'Score': 0.49851, 'Weight_Percent': 5.82272, 'Sector': 'Energy'}, 'AMZN': {'Score': 0.45262, 'Weight_Percent': 5.28671, 'Sector': 'Consumer Cyclical'}, 'NVDA': {'Score': 0.45121, 'Weight_Percent': 5.27025, 'Sector': 'Technology'}, 'JPM': {'Score': 0.65023, 'Weight_Percent': 5.10586, 'Sector': 'Financial Services'}, 'BAC': {'Score': 0.60402, 'Weight_Percent': 4.743, 'Sector': 'Financial Services'}}
 
 # ============================================================
 # 4. RUN TEST
