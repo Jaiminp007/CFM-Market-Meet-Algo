@@ -71,7 +71,7 @@ def score_data(valid_tickers):
     start="2025-05-15"
     end="2025-11-15"
 
-
+    # Function to get sector and other info from stock ticker
     def get_sector_safe(ticker):
         try:
             info = yf.Ticker(ticker).get_info()  
