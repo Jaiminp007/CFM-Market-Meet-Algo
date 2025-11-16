@@ -1,12 +1,11 @@
 # Import essential libraries for numerical computation, financial data retrieval, and data processing
-
 import numpy as np
 import yfinance as yf
 import pandas as pd
 
 # Reads a CSV file containing stock tickers and returns them as a Python list
 def read_csv(filename):
-    data=pd.read_csv(filename, header=None)
+    data = pd.read_csv(filename, header=None)
     l= data.values.tolist()
     list=[]
     for i in l:
@@ -15,14 +14,11 @@ def read_csv(filename):
     
 # Checks each ticker to determine if it is valid or invalid based on data availability,
 # trading volume, and market listing. It returns two lists: valid_tickers and invalid_tickers
-    
 def check_ticker(list):
     valid_tickers=[]
     invalid_tickers=[]
-    start = "2024-10-01"
-    end = "2025-10-01"
 
-# Retrieve S&P 500 history (used to validate data availability)
+    # Retrieve S&P 500 history (used to validate data availability)
     market = yf.Ticker("^GSPC")
     market_data = market.history(start=start, end=end, interval="1d")
     market_data["Market_Return"] = market_data["Close"].pct_change()
@@ -30,25 +26,24 @@ def check_ticker(list):
 
     for ticker in list:
         stock = yf.Ticker(ticker)
-        data = stock.history(start=start, end=end, interval="1d")
+        data = stock.history(start="2024-10-01", end="2025-10-01", interval="1d")
 
-# If there's no historical price data that exists, the stock is marked as invalid
+        # If there's no historical price data that exists, the stock is marked as invalid
         if data.empty:
             invalid_tickers.append(ticker)
             continue
 
         avg_volume = data["Volume"].mean()
 
-# If the volume of the ticker is less than 5000, the ticker is considered invalid
+        # If the volume of the ticker is less than 5000, the ticker is considered invalid
         if avg_volume < 5000:
             invalid_tickers.append(ticker)
             continue
 
         valid_tickers.append(ticker)
 
-# Ensure the ticker is listed on either a US or Canadian market
-# If it's not (foreign markets for example), mark it as invalid
-        
+        # Ensure the ticker is listed on either a US or Canadian market
+        # If it's not (foreign markets for example), mark it as invalid
         market_of_ticker = stock.info.get("market")
         if market_of_ticker not in ["us_market", "ca_market"]:
             invalid_tickers.append(ticker)
@@ -57,8 +52,7 @@ def check_ticker(list):
 
     return valid_tickers, invalid_tickers
 
-# We calculate the combined benchmark of both S&P 500 and TSX, creating a blended benchmark
-
+# Calculates the combined benchmark of both S&P 500 and TSX, creating a blended benchmark
 def blended_benchmark(start, end):
     data = yf.download(["^GSPC", "^GSPTSE"], start=start, end=end)["Close"]
     rets = data.pct_change().dropna()
@@ -111,7 +105,7 @@ def score_data(valid_tickers):
         rolling_corr = df[i].rolling(window).corr(df["Bench"])
         corr_mean = rolling_corr.dropna().mean()
 
-        # Volatility Calculation
+        
         vol_ann = float(stock_ret.std() * np.sqrt(252))
         raw_ratio = (vol_ann / bench_vol_ann) if np.isfinite(bench_vol_ann) else np.nan
         sigma_rel = float(raw_ratio / (1 + raw_ratio)) if np.isfinite(raw_ratio) else np.nan
@@ -339,6 +333,7 @@ def market_cap_filtering(final, scored_data):
             final[t]["Weight_Percent"] = round(final[t]["Weight_Percent"] * (100 / total), 5)
 
     return final
+
 
 def score_calculate(valid_tickers):
     x = score_data(valid_tickers)
