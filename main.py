@@ -220,7 +220,7 @@ def rebalance_currency_mix(final, target_ratio=0.5, tolerance=0.1):
 
     return dict(sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True))
 
-def apply_risk_constraints(final, max_position=10.0, max_sector=35.0, max_iters=3):
+def apply_risk_constraints(final, max_position=10.0, max_sector=35.0, max_iters=10):
     if not final:
         return final
     for _ in range(max_iters):
@@ -255,6 +255,78 @@ def apply_risk_constraints(final, max_position=10.0, max_sector=35.0, max_iters=
 
     return dict(sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True))
 
+def limit_portfolio_size(final, max_size=25, min_size=10):
+    if not final:
+        return final
+    items = sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True)
+    n = len(items)
+    if n <= max_size:
+        return dict(items)
+    trimmed = dict(items[:max_size])
+    total = sum(v["Weight_Percent"] for v in trimmed.values())
+    if total > 0:
+        norm = 100.0 / total
+        for t in trimmed:
+            trimmed[t]["Weight_Percent"] = float(np.round(trimmed[t]["Weight_Percent"] * norm, 5))
+    trimmed = apply_risk_constraints(trimmed, max_position=10.0, max_sector=35.0)
+    trimmed = rebalance_currency_mix(trimmed)
+
+    return trimmed
+
+def market_cap_filtering(final, scored_data):
+    if not final:
+        return final
+
+    CAD_PER_USD = 1.38
+
+    def get_mc_in_cad(ticker):
+        try:
+            info = yf.Ticker(ticker).get_info()
+            mc = info.get("marketCap", None)
+            if mc is None:
+                return None
+            return mc if ticker.endswith(".TO") else mc * CAD_PER_USD
+        except:
+            return None
+
+    def get_sector_of(t):
+        for tick, metrics in scored_data:
+            if tick == t:
+                return metrics.get("Sector", "Unknown")
+        return "Unknown"
+
+    caps = {t: get_mc_in_cad(t) for t in final}
+
+    has_large = any(mc and mc > 10_000_000_000 for mc in caps.values())
+    has_small = any(mc and mc < 2_000_000_000 for mc in caps.values())
+
+    if has_large and has_small:
+        return final
+
+    scored_caps = {}
+    for t, m in scored_data:
+        mc = get_mc_in_cad(t)
+        if mc is not None:
+            scored_caps[t] = mc
+
+    if not has_large:
+        candidates = [t for t, mc in scored_caps.items() if mc > 10_000_000_000]
+        if candidates:
+            t = candidates[0]
+            final[t] = {"Score": 0.5, "Weight_Percent": 0.0, "Sector": get_sector_of(t)}
+
+    if not has_small:
+        candidates = [t for t, mc in scored_caps.items() if mc < 2_000_000_000]
+        if candidates:
+            t = candidates[0]
+            final[t] = {"Score": 0.5, "Weight_Percent": 0.0, "Sector": get_sector_of(t)}
+
+    total = sum(v["Weight_Percent"] for v in final.values())
+    if total > 0:
+        for t in final:
+            final[t]["Weight_Percent"] = round(final[t]["Weight_Percent"] * (100 / total), 5)
+
+    return final
 
 def score_calculate(valid_tickers):
     x = score_data(valid_tickers)
@@ -296,12 +368,15 @@ def score_calculate(valid_tickers):
 
     final = add_defensive_layer(final, x, defensive_ratio=0.08)
 
-    final = apply_risk_constraints(final, max_position=10.0, max_sector=35.0)
-
     final = rebalance_currency_mix(final)
 
-    return final
+    final = limit_portfolio_size(final, max_size=25, min_size=10)
 
+    final = apply_risk_constraints(final, max_position=10.0, max_sector=35.0)
+
+    final = market_cap_filtering(final, x)
+
+    return final
 
 
 def main():
@@ -317,10 +392,8 @@ def main():
     print()
 
     print(x)
-    print()
+
+    print(len(x))
 
 if __name__ == "__main__":
     main()
-
-
-
