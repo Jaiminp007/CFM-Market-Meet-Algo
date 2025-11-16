@@ -13,8 +13,8 @@ def read_csv(filename):
         list.append(i[0])
     return list
     
-# Checks each ticker to determine if it is valid or invalid based on data availability,
-# trading volume, and market listing. It returns two lists: valid_tickers and invalid_tickers
+# Function that checks every ticker to determine if it is valid or invalid 
+# It returns two lists: valid_tickers and invalid_tickers
     
 def check_ticker(list):
     valid_tickers=[]
@@ -46,7 +46,7 @@ def check_ticker(list):
 
         valid_tickers.append(ticker)
 
-# Ensure the ticker is listed on either a US or Canadian market
+# Make sure that the ticker is listed on either a US or Canadian market
 # If it's not (foreign markets for example), mark it as invalid
         
         market_of_ticker = stock.info.get("market")
@@ -65,7 +65,7 @@ def blended_benchmark(start, end):
     blended = rets.mean(axis=1)
     return blended.rename("Benchmark")
 
-
+# 
 
 def score_data(valid_tickers):
     start="2025-05-15"
@@ -74,7 +74,7 @@ def score_data(valid_tickers):
 
     def get_sector_safe(ticker):
         try:
-            info = yf.Ticker(ticker).get_info()  # more reliable than .info on newer yfinance
+            info = yf.Ticker(ticker).get_info()  
         except Exception:
             info = {}
         sector = (
