@@ -61,28 +61,30 @@ def blended_benchmark(start, end):
     blended = rets.mean(axis=1)
     return blended.rename("Benchmark")
 
-# Function that takes a list of valid 
+# Function that takes a list of valid tickers + sets time range
 
 def score_data(valid_tickers):
     start="2025-05-15"
     end="2025-11-15"
 
-# Function to get sector and other info from stock ticker
+# Retrieves the sector from yfinance 
     def get_sector_safe(ticker):
         try:
-            info = yf.Ticker(ticker).get_info()  
-        except Exception:
+            info = yf.Ticker(ticker).get_info()  # Retrieves a dictionary of data from the company
+    
+        except Exception:    # This makes sure that if theres missing data or any errors, we run an empty dictionary instead of just crashing 
             info = {}
-        sector = (
+        sector = ( 
             info.get("sector")
             or info.get("industry")
             or info.get("categoryName")
             or "Unknown"
         )
-        return sector
+        # Returns the best available sector field 
+        # Will move onto industry if there's no sector for example
+        return sector 
 
-    # Empty lists to store results for each ticker
-    # Then generates the blended benchmark
+    # Empty lists to store results for each ticker then generates the blended benchmark
     valid_stocks_with_data = []
     bench = blended_benchmark(start, end)
 
@@ -95,30 +97,36 @@ def score_data(valid_tickers):
     # to roughly 3 trading months
     window = 63 
 
+
+    # Looping through all valid tickers and extracting daily returns
     for i in valid_tickers:
         stock_ret = yf.download(i, start=start, end=end, auto_adjust=True)["Close"].pct_change().dropna()
 
+    # Name return series as the ticker and combine stock's daily returns with blended benchmark daily returns
         stock_ret.name = i 
-        df = pd.concat([stock_ret, bench], axis=1).dropna().rename(columns={"Benchmark": "Bench"})
-        if len(df) < window:
+        df = pd.concat([stock_ret, bench], axis=1).dropna().rename(columns={"Benchmark": "Bench"}) #            Is renaming to "Bench" really necessary???
+        if len(df) < window: # If there's not at least 63 days of overlapping data, we skip the ticker
             continue
 
+        # This calculates the rolling beta between the stock and blended benchmark over the given time period
+        # A rolling beta recalculates the beta every time new data comes in for a 63 day window, adding more accuracy than a standard beta calculation
         rolling_cov = df[i].rolling(window).cov(df["Bench"])
         rolling_var = df["Bench"].rolling(window).var()
         rolling_beta = rolling_cov / rolling_var
+
+        # Average of all rolling beta values to get an overall beta estimate
         beta_mean = rolling_beta.dropna().mean()
 
+        # Calculates rolling correlation between stock and benchmark and finds average of all values 
         rolling_corr = df[i].rolling(window).corr(df["Bench"])
         corr_mean = rolling_corr.dropna().mean()
 
         
-        vol_ann = float(stock_ret.std() * np.sqrt(252))
-        raw_ratio = (vol_ann / bench_vol_ann) if np.isfinite(bench_vol_ann) else np.nan
-        sigma_rel = float(raw_ratio / (1 + raw_ratio)) if np.isfinite(raw_ratio) else np.nan
-
+        vol_ann = float(stock_ret.std() * np.sqrt(252)) # Converts daily volatility to annual volatility
+        raw_ratio = (vol_ann / bench_vol_ann) if np.isfinite(bench_vol_ann) else np.nan # Volatility vs benchmark
+        sigma_rel = float(raw_ratio / (1 + raw_ratio)) if np.isfinite(raw_ratio) else np.nan # Converts the ratio to a value betwen 0 and 1
 
         sector = get_sector_safe(i)
-
 
         valid_stocks_with_data.append([i, {'Beta': float(np.round(beta_mean, 5)), 'Correlation': float(np.round(corr_mean, 5)), 'Volatility_Ann': float(np.round(vol_ann, 5)), 'Sigma_Rel': float(np.round(sigma_rel, 5)), 'Sector': sector}])
         
