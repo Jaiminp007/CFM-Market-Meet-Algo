@@ -126,24 +126,35 @@ def score_data(valid_tickers):
         raw_ratio = (vol_ann / bench_vol_ann) if np.isfinite(bench_vol_ann) else np.nan # Volatility vs benchmark
         sigma_rel = float(raw_ratio / (1 + raw_ratio)) if np.isfinite(raw_ratio) else np.nan # Converts the ratio to a value betwen 0 and 1
 
+        # Retrieves info by calling the function
         sector = get_sector_safe(i)
 
+        # Stores all the metrics for given ticker
         valid_stocks_with_data.append([i, {'Beta': float(np.round(beta_mean, 5)), 'Correlation': float(np.round(corr_mean, 5)), 'Volatility_Ann': float(np.round(vol_ann, 5)), 'Sigma_Rel': float(np.round(sigma_rel, 5)), 'Sector': sector}])
         
     return valid_stocks_with_data
 
+
+# Cleans up the scored tickers, removing stocks with zero/negative weight and 
+# sorts them from highest weight to lowest
+
 def filter_out_low_weight_stocks(final_stocks):
     final_portfolio = {}
     for ticker, vals in final_stocks.items():
-        if vals[2] > 0.0:
+        # vals = [score, sector, weight_percent]
+        if vals[2] > 0.0: # Dropping tickers with zero or negative weight
             final_portfolio[ticker] = {
                 "Score": vals[0],
                 "Weight_Percent": vals[2],
                 "Sector": vals[1]
             }
+ # Then, sort the tickers by weight from highest to lowest 
+
     return dict(sorted(final_portfolio.items(),
                        key=lambda kv: kv[1]["Weight_Percent"],
                        reverse=True))
+
+
 
 def add_defensive_layer(final, scored_data, defensive_ratio=0.08):
     if not final:
