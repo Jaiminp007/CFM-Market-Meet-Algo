@@ -1,0 +1,38 @@
+FINAL PORTFOLIO
+==================================================
+
+JPM: 4.58158% - Financial Services
+PG: 4.55533% - Consumer Defensive
+WMT: 4.55533% - Consumer Defensive
+ABBV: 4.55533% - Healthcare
+MSFT: 4.50695% - Technology
+UNP: 4.34751% - Industrials
+V: 4.34201% - Financial Services
+HD: 4.30918% - Consumer Cyclical
+MA: 4.29662% - Financial Services
+CSCO: 4.2437% - Technology
+HON: 4.17495% - Industrials
+LOW: 4.08032% - Consumer Cyclical
+AAPL: 3.91255% - Technology
+RTX: 3.73343% - Industrials
+MCD: 3.71399% - Consumer Cyclical
+JNJ: 3.70462% - Healthcare
+CVX: 3.70124% - Energy
+COST: 3.68482% - Consumer Defensive
+IBM: 3.57427% - Technology
+ADBE: 3.55524% - Technology
+ACN: 3.54643% - Technology
+VZ: 3.53184% - Communication Services
+ABT: 3.51594% - Healthcare
+GOOGL: 3.51474% - Communication Services
+PEP: 3.51206% - Consumer Defensive
+
+==================================================
+PERFORMANCE METRICS
+==================================================
+
+Total_Return: 12.09%
+Annual_Return: 12.25%
+Annual_Volatility: 14.38%
+Sharpe_Ratio: 0.85%
+Max_Drawdown: -13.82%

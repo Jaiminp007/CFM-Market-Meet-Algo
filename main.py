@@ -1,9 +1,11 @@
+<<<<<<< HEAD
 # Import essential libraries for numerical computation, financial data retrieval, and data processing
+=======
+>>>>>>> f802d3d (Final Commit Hopefully🤞)
 import numpy as np
 import yfinance as yf
 import pandas as pd
 
-# Reads a CSV file containing stock tickers and returns them as a Python list
 def read_csv(filename):
     data = pd.read_csv(filename, header=None)
     l= data.values.tolist()
@@ -11,11 +13,15 @@ def read_csv(filename):
     for i in l:
         list.append(i[0])
     return list
+<<<<<<< HEAD
     
 # Checks each ticker to determine if it is valid or invalid based on data availability,
 # trading volume, and market listing. It returns two lists: valid_tickers and invalid_tickers
 # Function that checks every ticker to determine if it is valid or invalid 
 # It returns two lists: valid_tickers and invalid_tickers   
+=======
+
+>>>>>>> f802d3d (Final Commit Hopefully🤞)
 def check_ticker(list):
     valid_tickers=[]
     invalid_tickers=[]
@@ -121,10 +127,18 @@ def score_data(valid_tickers):
         rolling_corr = df[i].rolling(window).corr(df["Bench"])
         corr_mean = rolling_corr.dropna().mean()
 
+<<<<<<< HEAD
         
         vol_ann = float(stock_ret.std() * np.sqrt(252)) # Converts daily volatility to annual volatility
         raw_ratio = (vol_ann / bench_vol_ann) if np.isfinite(bench_vol_ann) else np.nan # Volatility vs benchmark
         sigma_rel = float(raw_ratio / (1 + raw_ratio)) if np.isfinite(raw_ratio) else np.nan # Converts the ratio to a value betwen 0 and 1
+=======
+        # Volatility Calculation
+        vol_ann = stock_ret.std() * np.sqrt(252)
+        raw_ratio = (vol_ann / bench_vol_ann) if np.isfinite(bench_vol_ann) else np.nan
+        sigma_rel = float(raw_ratio / (1 + raw_ratio)) if (isinstance(raw_ratio, (int, float)) and np.isfinite(raw_ratio)) else np.nan
+
+>>>>>>> f802d3d (Final Commit Hopefully🤞)
 
         # Retrieves info by calling the function
         sector = get_sector_safe(i)
@@ -154,9 +168,13 @@ def filter_out_low_weight_stocks(final_stocks):
                        key=lambda kv: kv[1]["Weight_Percent"],
                        reverse=True))
 
+<<<<<<< HEAD
 
 
 def add_defensive_layer(final, scored_data, defensive_ratio=0.08):
+=======
+def add_defensive_layer(final, scored_data, defensive_ratio=0.05):
+>>>>>>> f802d3d (Final Commit Hopefully🤞)
     if not final:
         return final
     
@@ -251,7 +269,7 @@ def rebalance_currency_mix(final, target_ratio=0.5, tolerance=0.1):
 
     return dict(sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True))
 
-def apply_risk_constraints(final, max_position=15.0, max_sector=35.0, max_iters=50):
+def apply_risk_constraints(final, max_position=15.0, max_sector=40.0, max_iters=50):
     if not final:
         return final
     for _ in range(max_iters):
@@ -299,7 +317,7 @@ def limit_portfolio_size(final, max_size=25, min_size=10):
         norm = 100.0 / total
         for t in trimmed:
             trimmed[t]["Weight_Percent"] = float(np.round(trimmed[t]["Weight_Percent"] * norm, 5))
-    trimmed = apply_risk_constraints(trimmed, max_position=15.0, max_sector=35.0)
+    trimmed = apply_risk_constraints(trimmed, max_position=15.0, max_sector=40.0)
     trimmed = rebalance_currency_mix(trimmed)
 
     return trimmed
@@ -382,13 +400,29 @@ def market_cap_filtering(final, scored_data):
 
     return final
 
+<<<<<<< HEAD
+=======
+def shrink_weights_for_fees(final, cash_buffer_bps=25):
+    if not final:
+        return final
+    buffer_pct = cash_buffer_bps / 100.0
+    scale = (100.0 - buffer_pct) / 100.0
+    for t in final:
+        final[t]["Weight_Percent"] = float(np.round(final[t]["Weight_Percent"] * scale, 5))
+    return dict(sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True))
+
+def net_returns_after_mgmt_fee(daily_returns, annual_fee_bps=50):
+    fee_daily = annual_fee_bps / 10000.0 / 252.0
+    return daily_returns - fee_daily
+
+>>>>>>> f802d3d (Final Commit Hopefully🤞)
 
 def score_calculate(valid_tickers):
     x = score_data(valid_tickers)
     final = {}
     total_weight = 0.0
 
-    w1, w2, w3 = 0.4, 0.4, 0.2
+    w1, w2, w3 = 0.45, 0.45, 0.1
 
     for ticker, m in x:
         beta = m['Beta']
@@ -421,7 +455,7 @@ def score_calculate(valid_tickers):
 
     final = filter_out_low_weight_stocks(final)
 
-    final = add_defensive_layer(final, x, defensive_ratio=0.08)
+    final = add_defensive_layer(final, x, defensive_ratio=0.05)
 
     final = rebalance_currency_mix(final)
 
@@ -431,26 +465,120 @@ def score_calculate(valid_tickers):
 
     final = enforce_min_weight(final)
     
-    final = apply_risk_constraints(final, max_position=15.0, max_sector=35.0)
+    final = apply_risk_constraints(final, max_position=15.0, max_sector=40.0)
+
+    final = shrink_weights_for_fees(final, cash_buffer_bps=25)
 
     return final
 
 
+def create_portfolio_dataframe(final_portfolio, total_value_cad=1000000):
+    """Create the final portfolio DataFrame with all required columns"""
+    
+    CAD_PER_USD = 1.38
+    
+    portfolio_data = []
+    
+    for ticker, data in final_portfolio.items():
+        # Get current price
+        try:
+            stock = yf.Ticker(ticker)
+            info = stock.get_info()
+            price = info.get('currentPrice') or info.get('regularMarketPrice')
+            
+            if price is None:
+                hist = stock.history(period="5d")
+                if not hist.empty:
+                    price = hist['Close'].iloc[-1]
+                else:
+                    continue
+        except:
+            continue
+        
+        # Determine currency
+        currency = "CAD" if ticker.endswith(".TO") else "USD"
+        
+        # Calculate allocation in CAD
+        weight_decimal = data['Weight_Percent'] / 100
+        allocation_cad = total_value_cad * weight_decimal
+        
+        # Convert to appropriate currency for shares calculation
+        if currency == "USD":
+            allocation_in_currency = allocation_cad / CAD_PER_USD
+        else:
+            allocation_in_currency = allocation_cad
+        
+        # Calculate shares
+        shares = round(allocation_in_currency / price, 4)
+        
+        # Calculate actual value in original currency
+        value_in_currency = shares * price
+        
+        # Convert value to CAD
+        value_cad = value_in_currency if currency == "CAD" else value_in_currency * CAD_PER_USD
+        
+        portfolio_data.append({
+            'Ticker': ticker,
+            'Price': round(price, 2),
+            'Currency': currency,
+            'Shares': shares,
+            'Value': round(value_cad, 2),
+            'Weight': round(data['Weight_Percent'], 2)
+        })
+    
+    df = pd.DataFrame(portfolio_data)
+    df.index = range(1, len(df) + 1)
+    
+    return df
+
+def save_stocks_csv(portfolio_df, group_number, directory="."):
+    """Save Ticker and Shares to CSV"""
+    stocks_df = portfolio_df[['Ticker', 'Shares']].copy()
+    filename = f"{directory}/Stocks_Group_{group_number:02d}.csv"
+    stocks_df.to_csv(filename, index=False)
+    print(f"\nStocks CSV saved to: {filename}")
+    return filename
+
+
 def main():
-    tickers_list = read_csv("Test.csv")
+    tickers_list = read_csv("Tickers.csv")
     valid, invalid = check_ticker(tickers_list)
 
-    x = score_calculate(valid)
+    final_portfolio = score_calculate(valid)
 
-    print("Valid:", valid)
-    print()
+    final_portfolio = score_calculate(valid)
     
-    print("Invalid:", invalid)
-    print()
-
-    print(x)
-
-    print(len(x))
-
+    print(f"Final portfolio contains {len(final_portfolio)} stocks\n")
+    
+    # Account for fees (0.25% buffer already applied in shrink_weights_for_fees)
+    TOTAL_PORTFOLIO_VALUE = 1000000  # $1M CAD
+    FEES_BPS = 25  # 0.25% = 25 basis points
+    available_to_invest = TOTAL_PORTFOLIO_VALUE * (1 - FEES_BPS/10000)
+    
+    # Create portfolio DataFrame
+    portfolio_df = create_portfolio_dataframe(final_portfolio, available_to_invest)
+    
+    # Display Portfolio_Final DataFrame
+    print("="*80)
+    print("PORTFOLIO_FINAL")
+    print("="*80)
+    print(portfolio_df.to_string())
+    print("\n" + "="*80)
+    
+    # Calculate actual totals
+    total_value = portfolio_df['Value'].sum()
+    total_weight = portfolio_df['Weight'].sum()
+    
+    print(f"\nTotal Portfolio Value: ${total_value:,.2f} CAD")
+    print(f"Total Weight: {total_weight:.2f}%")
+    print(f"Cash Reserve (fees): ${TOTAL_PORTFOLIO_VALUE - total_value:,.2f} CAD")
+    print(f"Portfolio + Cash: ${total_value + (TOTAL_PORTFOLIO_VALUE - total_value):,.2f} CAD")
+    
+    # Save stocks CSV
+    save_stocks_csv(portfolio_df, 13)
+    
+    # Save full portfolio to CSV as well (optional)
+    portfolio_df.to_csv(f"Portfolio_Group_{13:02d}.csv")
+    print(f"Full portfolio saved to: Portfolio_Group_{13:02d}.csv")
 if __name__ == "__main__":
     main()
