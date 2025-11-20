@@ -248,43 +248,52 @@ def add_defensive_layer(final, scored_data, defensive_ratio=0.05):
 # Return the completed portfolio from highest -> lowest weight
     return dict(sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True))
 
-
+# Function that tries to keep CAD stocks and USD stocks equal 
 def rebalance_currency_mix(final, target_ratio=0.5, tolerance=0.1):
     if not final:
-        return final
+        return final # Like before if portfolio is empty, stop
     
-    cad_tickers = [t for t in final if t.endswith(".TO")]
+    cad_tickers = [t for t in final if t.endswith(".TO")]  #TSX (ends in .TO)
     usd_tickers = [t for t in final if not t.endswith(".TO")]
 
+    # Find current weights
     cad_weight = sum(final[t]["Weight_Percent"] for t in cad_tickers)
     usd_weight = sum(final[t]["Weight_Percent"] for t in usd_tickers)
     total = cad_weight + usd_weight
     if total == 0:
         return final
-    
+
+    # Compute CAD stock ratio
     cad_ratio = cad_weight / total
 
+    # Stop if there's no CAD or USD stocks
     if cad_weight == 0 or usd_weight == 0:
         return final
-    
+
+    # If the difference between the ratios is <= 10%, don't bother rebalancing
     if abs(cad_ratio - target_ratio) > tolerance:
+        # Find the target weightings
         target_cad = target_ratio * 100.0
         target_usd = (1 - target_ratio) * 100.0
 
+        # Ratio to multiply with each weighting to fix it
         scale_cad = target_cad / cad_weight
         scale_usd = target_usd / usd_weight
 
+        # Now we loop through each CAD and US stock and multiply the scale to each
         for t in cad_tickers:
             final[t]["Weight_Percent"] = round(final[t]["Weight_Percent"] * scale_cad, 5)
         for t in usd_tickers:
             final[t]["Weight_Percent"] = round(final[t]["Weight_Percent"] * scale_usd, 5)
 
+        # Make sure the whole portfolio sums to exactly 100% (avoids rounding errors)
         new_total = sum(v["Weight_Percent"] for v in final.values())
         if new_total > 0:
             norm = 100.0 / new_total
             for t in final:
                 final[t]["Weight_Percent"] = round(final[t]["Weight_Percent"] * norm, 5)
 
+    # Return the final dictionary by weightings
     return dict(sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True))
 
 def apply_risk_constraints(final, max_position=15.0, max_sector=40.0, max_iters=50):
