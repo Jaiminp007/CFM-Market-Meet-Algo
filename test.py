@@ -19,62 +19,49 @@ def blended_benchmark(start, end):
 # ============================================================
 # 2. PORTFOLIO BACKTEST VS BENCHMARK
 # ============================================================
+# ...existing code...
 def test_portfolio_vs_benchmark(final, start="2025-11-01", end="2025-11-15"):
-
     if not final:
         print("Portfolio is empty.")
         return
 
-    # Normalize weights
     total_w = sum(v["Weight_Percent"] for v in final.values())
     weights = {t: v["Weight_Percent"] / total_w for t, v in final.items()}
     tickers = list(weights.keys())
 
-    print("\nDownloading portfolio data...")
+    print(f"\nDownloading portfolio data ({start} → {end})...")
     price_data = yf.download(tickers, start=start, end=end)["Close"]
-
-    # --- returns ---
     stock_rets = price_data.pct_change().dropna()
 
-    # ============================================================
-    # FIXED: Align weights EXACTLY with price_data.columns
-    # Avoids incorrect multiplication & fake returns
-    # ============================================================
     aligned_weights = np.array([weights[t] for t in stock_rets.columns])
-
-    # Portfolio return
     port_ret = stock_rets.mul(aligned_weights).sum(axis=1)
 
-    # ============================================================
-    # Benchmark
-    # ============================================================
     print("Downloading benchmark data...")
     bench_price = blended_benchmark(start, end)
     bench_ret = bench_price.pct_change().dropna()
 
-    # Match date index to avoid timezone gaps
-    port_ret = port_ret.loc[bench_ret.index]
+    # Strict intersection
+    common = port_ret.index.intersection(bench_ret.index)
+    port_ret = port_ret.loc[common]
+    bench_ret = bench_ret.loc[common]
 
-    # Cumulative return
+    assert len(port_ret) == len(bench_ret), "Date alignment failed"
+
     port_cum = float((1 + port_ret).prod() - 1)
     bench_cum = float((1 + bench_ret).prod() - 1)
 
-    # ============================================================
-    # Print Results
-    # ============================================================
+    print(f"\nCommon trading days: {len(common)} (first {common[0].date()} / last {common[-1].date()})")
     print("\n📈 PERFORMANCE TEST — Portfolio vs Blended Benchmark (S&P500 + TSX)")
     print(f"Portfolio Return: {port_cum * 100:.2f}%")
     print(f"Benchmark Return: {bench_cum * 100:.2f}%")
     print(f"Outperformance:   {(port_cum - bench_cum) * 100:.2f}%")
-
     return port_cum, bench_cum
-
-
+# ...existing code...
 
 # ============================================================
 # 3. YOUR PORTFOLIO (paste anything here)
 # ============================================================
-portfolio = {'JPM': {'Score': 0.65023, 'Weight_Percent': 4.58158, 'Sector': 'Financial Services'}, 'PG': {'Score': 0.55431, 'Weight_Percent': 4.55533, 'Sector': 'Consumer Defensive'}, 'WMT': {'Score': 0.54301, 'Weight_Percent': 4.55533, 'Sector': 'Consumer Defensive'}, 'ABBV': {'Score': 0.50152, 'Weight_Percent': 4.55533, 'Sector': 'Healthcare'}, 'MSFT': {'Score': 0.63964, 'Weight_Percent': 4.50695, 'Sector': 'Technology'}, 'UNP': {'Score': 0.61701, 'Weight_Percent': 4.34751, 'Sector': 'Industrials'}, 'V': {'Score': 0.61623, 'Weight_Percent': 4.34201, 'Sector': 'Financial Services'}, 'HD': {'Score': 0.61157, 'Weight_Percent': 4.30918, 'Sector': 'Consumer Cyclical'}, 'MA': {'Score': 0.60979, 'Weight_Percent': 4.29662, 'Sector': 'Financial Services'}, 'CSCO': {'Score': 0.60228, 'Weight_Percent': 4.2437, 'Sector': 'Technology'}, 'HON': {'Score': 0.59252, 'Weight_Percent': 4.17495, 'Sector': 'Industrials'}, 'LOW': {'Score': 0.57909, 'Weight_Percent': 4.08032, 'Sector': 'Consumer Cyclical'}, 'AAPL': {'Score': 0.55528, 'Weight_Percent': 3.91255, 'Sector': 'Technology'}, 'RTX': {'Score': 0.52986, 'Weight_Percent': 3.73343, 'Sector': 'Industrials'}, 'MCD': {'Score': 0.5271, 'Weight_Percent': 3.71399, 'Sector': 'Consumer Cyclical'}, 'JNJ': {'Score': 0.52577, 'Weight_Percent': 3.70462, 'Sector': 'Healthcare'}, 'CVX': {'Score': 0.52529, 'Weight_Percent': 3.70124, 'Sector': 'Energy'}, 'COST': {'Score': 0.52296, 'Weight_Percent': 3.68482, 'Sector': 'Consumer Defensive'}, 'IBM': {'Score': 0.50727, 'Weight_Percent': 3.57427, 'Sector': 'Technology'}, 'ADBE': {'Score': 0.50457, 'Weight_Percent': 3.55524, 'Sector': 'Technology'}, 'ACN': {'Score': 0.50332, 'Weight_Percent': 3.54643, 'Sector': 'Technology'}, 'VZ': {'Score': 0.50125, 'Weight_Percent': 3.53184, 'Sector': 'Communication Services'}, 'ABT': {'Score': 0.49899, 'Weight_Percent': 3.51594, 'Sector': 'Healthcare'}, 'GOOGL': {'Score': 0.49882, 'Weight_Percent': 3.51474, 'Sector': 'Communication Services'}, 'PEP': {'Score': 0.49844, 'Weight_Percent': 3.51206, 'Sector': 'Consumer Defensive'}}
+portfolio = {'WMT': {'Score': 0.57143, 'Weight_Percent': 6.14759, 'Sector': 'Consumer Defensive'}, 'PG': {'Score': 0.56812, 'Weight_Percent': 6.14759, 'Sector': 'Consumer Defensive'}, 'V': {'Score': 0.68833, 'Weight_Percent': 3.98038, 'Sector': 'Financial Services'}, 'AAPL': {'Score': 0.68776, 'Weight_Percent': 3.9771, 'Sector': 'Technology'}, 'AMZN': {'Score': 0.68466, 'Weight_Percent': 3.95917, 'Sector': 'Consumer Cyclical'}, 'HON': {'Score': 0.68063, 'Weight_Percent': 3.93587, 'Sector': 'Industrials'}, 'JPM': {'Score': 0.6782, 'Weight_Percent': 3.9218, 'Sector': 'Financial Services'}, 'CSCO': {'Score': 0.67344, 'Weight_Percent': 3.8943, 'Sector': 'Technology'}, 'LOW': {'Score': 0.66824, 'Weight_Percent': 3.86424, 'Sector': 'Consumer Cyclical'}, 'QCOM': {'Score': 0.66739, 'Weight_Percent': 3.85932, 'Sector': 'Technology'}, 'IBM': {'Score': 0.66464, 'Weight_Percent': 3.8434, 'Sector': 'Technology'}, 'GOOGL': {'Score': 0.66255, 'Weight_Percent': 3.83133, 'Sector': 'Communication Services'}, 'NKE': {'Score': 0.66204, 'Weight_Percent': 3.82839, 'Sector': 'Consumer Cyclical'}, 'UPS': {'Score': 0.65787, 'Weight_Percent': 3.80427, 'Sector': 'Industrials'}, 'HD': {'Score': 0.65728, 'Weight_Percent': 3.80086, 'Sector': 'Consumer Cyclical'}, 'AVGO': {'Score': 0.65603, 'Weight_Percent': 3.79364, 'Sector': 'Technology'}, 'ADBE': {'Score': 0.65477, 'Weight_Percent': 3.78636, 'Sector': 'Technology'}, 'UNH': {'Score': 0.65332, 'Weight_Percent': 3.77795, 'Sector': 'Healthcare'}, 'ACN': {'Score': 0.6485, 'Weight_Percent': 3.75007, 'Sector': 'Technology'}, 'MA': {'Score': 0.6449, 'Weight_Percent': 3.72926, 'Sector': 'Financial Services'}, 'UNP': {'Score': 0.63792, 'Weight_Percent': 3.68891, 'Sector': 'Industrials'}, 'INTC': {'Score': 0.63631, 'Weight_Percent': 3.67958, 'Sector': 'Technology'}, 'BA': {'Score': 0.63026, 'Weight_Percent': 3.64458, 'Sector': 'Industrials'}, 'DHR': {'Score': 0.61477, 'Weight_Percent': 3.55503, 'Sector': 'Healthcare'}, 'LLY': {'Score': 0.61373, 'Weight_Percent': 3.54901, 'Sector': 'Healthcare'}}
 
 # ============================================================
 # 4. RUN TEST

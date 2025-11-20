@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 # Import essential libraries for numerical computation, financial data retrieval, and data processing
-=======
->>>>>>> f802d3d (Final Commit Hopefully🤞)
 import numpy as np
 import yfinance as yf
 import pandas as pd
@@ -13,28 +10,25 @@ def read_csv(filename):
     for i in l:
         list.append(i[0])
     return list
-<<<<<<< HEAD
     
 # Checks each ticker to determine if it is valid or invalid based on data availability,
 # trading volume, and market listing. It returns two lists: valid_tickers and invalid_tickers
 # Function that checks every ticker to determine if it is valid or invalid 
 # It returns two lists: valid_tickers and invalid_tickers   
-=======
-
->>>>>>> f802d3d (Final Commit Hopefully🤞)
 def check_ticker(list):
     valid_tickers=[]
     invalid_tickers=[]
-
+    start = "2024-10-01"
+    end = "2025-10-01"
     # Retrieve S&P 500 history (used to validate data availability)
     market = yf.Ticker("^GSPC")
     market_data = market.history(start=start, end=end, interval="1d")
     market_data["Market_Return"] = market_data["Close"].pct_change()
 
-
+    info_cache = {}
     for ticker in list:
         stock = yf.Ticker(ticker)
-        data = stock.history(start="2024-10-01", end="2025-10-01", interval="1d")
+        data = stock.history(start=start, end=end, interval="1d")
 
         # If there's no historical price data that exists, the stock is marked as invalid
         if data.empty:
@@ -47,25 +41,27 @@ def check_ticker(list):
         if avg_volume < 5000:
             invalid_tickers.append(ticker)
             continue
-
-        valid_tickers.append(ticker)
-
-        # Ensure the ticker is listed on either a US or Canadian market
-        # If it's not (foreign markets for example), mark it as invalid
-        market_of_ticker = stock.info.get("market")
+        try:
+            if ticker not in info_cache:
+                info_cache[ticker] = stock.get_info()
+            market_of_ticker = info_cache[ticker].get("market")
+        except Exception:
+            market_of_ticker = None
+        
         if market_of_ticker not in ["us_market", "ca_market"]:
             invalid_tickers.append(ticker)
-            valid_tickers.remove(ticker)
             continue
+
+        valid_tickers.append(ticker)
 
     return valid_tickers, invalid_tickers
 
 # Calculates the combined benchmark of both S&P 500 and TSX, creating a blended benchmark
 def blended_benchmark(start, end):
     data = yf.download(["^GSPC", "^GSPTSE"], start=start, end=end)["Close"]
-    rets = data.pct_change().dropna()
-    blended = rets.mean(axis=1)
-    return blended.rename("Benchmark")
+    blended_price = 0.5 * data["^GSPC"] + 0.5 * data["^GSPTSE"]
+    returns = blended_price.pct_change().dropna()
+    return returns.rename("Benchmark")
 
 # Function that takes a list of valid tickers + sets time range
 
@@ -96,8 +92,8 @@ def score_data(valid_tickers):
 
 # Formula for converting the daily volatility to the annual volatility
     bench_vol_ann = float(bench.std() * np.sqrt(252))
-    if not np.isfinite(bench_vol_ann) or bench_vol_ann <= 0:
-        bench_vol_ann = np.nan # If the value is invalid, it's replaced with np.nan
+    if bench_vol_ann <= 0 or not np.isfinite(bench_vol_ann):
+        bench_vol_ann = bench.std() * np.sqrt(252) # If the value is invalid, it's replaced with np.nan
    
     # Sets the number of days in the rolling window (as we have a rolling beta and rolling correlation)
     # to roughly 3 trading months
@@ -127,18 +123,11 @@ def score_data(valid_tickers):
         rolling_corr = df[i].rolling(window).corr(df["Bench"])
         corr_mean = rolling_corr.dropna().mean()
 
-<<<<<<< HEAD
-        
-        vol_ann = float(stock_ret.std() * np.sqrt(252)) # Converts daily volatility to annual volatility
-        raw_ratio = (vol_ann / bench_vol_ann) if np.isfinite(bench_vol_ann) else np.nan # Volatility vs benchmark
-        sigma_rel = float(raw_ratio / (1 + raw_ratio)) if np.isfinite(raw_ratio) else np.nan # Converts the ratio to a value betwen 0 and 1
-=======
         # Volatility Calculation
         vol_ann = stock_ret.std() * np.sqrt(252)
         raw_ratio = (vol_ann / bench_vol_ann) if np.isfinite(bench_vol_ann) else np.nan
         sigma_rel = float(raw_ratio / (1 + raw_ratio)) if (isinstance(raw_ratio, (int, float)) and np.isfinite(raw_ratio)) else np.nan
 
->>>>>>> f802d3d (Final Commit Hopefully🤞)
 
         # Retrieves info by calling the function
         sector = get_sector_safe(i)
@@ -168,14 +157,8 @@ def filter_out_low_weight_stocks(final_stocks):
                        key=lambda kv: kv[1]["Weight_Percent"],
                        reverse=True))
 
-<<<<<<< HEAD
-
 # Function that finds low-beta/low-volatility stocks to reduce risk for the portfolio in case the market drops
-
-def add_defensive_layer(final, scored_data, defensive_ratio=0.08):
-=======
 def add_defensive_layer(final, scored_data, defensive_ratio=0.05):
->>>>>>> f802d3d (Final Commit Hopefully🤞)
     if not final:
         return final # Stops the function if the portfolio is empty (no portfolio to modify)
 
@@ -427,8 +410,6 @@ def market_cap_filtering(final, scored_data):
 
     return final
 
-<<<<<<< HEAD
-=======
 def shrink_weights_for_fees(final, cash_buffer_bps=25):
     if not final:
         return final
@@ -441,8 +422,6 @@ def shrink_weights_for_fees(final, cash_buffer_bps=25):
 def net_returns_after_mgmt_fee(daily_returns, annual_fee_bps=50):
     fee_daily = annual_fee_bps / 10000.0 / 252.0
     return daily_returns - fee_daily
-
->>>>>>> f802d3d (Final Commit Hopefully🤞)
 
 def score_calculate(valid_tickers):
     x = score_data(valid_tickers)
@@ -572,10 +551,9 @@ def main():
     valid, invalid = check_ticker(tickers_list)
 
     final_portfolio = score_calculate(valid)
-
-    final_portfolio = score_calculate(valid)
     
     print(f"Final portfolio contains {len(final_portfolio)} stocks\n")
+    print(final_portfolio)
     
     # Account for fees (0.25% buffer already applied in shrink_weights_for_fees)
     TOTAL_PORTFOLIO_VALUE = 1000000  # $1M CAD
