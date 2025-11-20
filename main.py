@@ -170,66 +170,84 @@ def filter_out_low_weight_stocks(final_stocks):
 
 <<<<<<< HEAD
 
+# Function that finds low-beta/low-volatility stocks to reduce risk for the portfolio in case the market drops
 
 def add_defensive_layer(final, scored_data, defensive_ratio=0.08):
 =======
 def add_defensive_layer(final, scored_data, defensive_ratio=0.05):
 >>>>>>> f802d3d (Final Commit Hopefully🤞)
     if not final:
-        return final
-    
+        return final # Stops the function if the portfolio is empty (no portfolio to modify)
+
+    # Sectors that are relatively safe even during recessions 
     allowed_sectors = {"Utilities", "Consumer Defensive", "Healthcare"}
 
+    # A criteria for selecting low-risk stocks 
     defensives = [
         (t, m)
         for t, m in scored_data
         if isinstance(m.get("Beta"), (int, float))
         and isinstance(m.get("Volatility_Ann"), (int, float))
-        and m["Beta"] < 0.9
-        and m["Volatility_Ann"] < 0.25
-        and m.get("Sector") in allowed_sectors
+        and m["Beta"] < 0.9 # beta needs to be <0.9
+        and m["Volatility_Ann"] < 0.25 #Volatility needs to be <0.25
+        and m.get("Sector") in allowed_sectors # stock needs to be in one of the chosen sectors
     ]
+
+# don't add defensive layer if nothing qualifies
     if not defensives:
         return final
-    
+
+# Sort the qualified stocks by correlation with benchmark and take the top 3
     defensives = sorted(
         defensives,
         key=lambda x: (x[1].get("Correlation") if pd.notna(x[1].get("Correlation")) else -np.inf),
         reverse=True
     )[:3]
 
+# Makes a set for the 3 chosen stocks
     selected = {t for t, _ in defensives}
+
+# Make sure the portfolio isn't empty/corrupted
     total_before = sum(v["Weight_Percent"] for v in final.values())
     if total_before <= 0:
         return final
-    
+
+# Distribute 5% of the total portfolio to defensive stocks
     def_total = defensive_ratio * 100.0
+# How much weight do the selected stocks already occupy? 
     selected_sum = sum(final[t]["Weight_Percent"] for t in final if t in selected)
+# How much of the weight is not taken up by the safety stocks?
     nondef_sum = total_before - selected_sum
+# In case defensive stocks are >= 100% (stops an edge case)
     if nondef_sum <= 0:
         return final
-    
+
+# Find how much we need to adjust stock weightings so defensive ones take up 5%
     scale = (total_before - def_total) / nondef_sum
     for t, data in final.items():
-        if t not in selected:
-            data["Weight_Percent"] = float(np.round(data["Weight_Percent"] * scale, 5))
+        if t not in selected: # If a stock is NOT defensive, multiply it by "scale"
+            data["Weight_Percent"] = float(np.round(data["Weight_Percent"] * scale, 5)) # This shifts the rest of the portfolio to 95%
 
+    # Distribute an equal weight to each defensive stock
     each = float(np.round(def_total / len(defensives), 5))
     for t, m in defensives:
         if t in final:
             final[t]["Weight_Percent"] = each
             final[t]["Sector"] = m.get("Sector", final[t]["Sector"])
         else:
-            # If a defensive pick wasn't in the core, add it with a neutral score
+            # If a defensive pick wasn't in the top 3, add it with a score of 0
             final[t] = {"Score": 0.0, "Weight_Percent": each, "Sector": m.get("Sector", "Unknown")}
-        
+
+# Make sure that the total portfolio still sums to exactly 100% (might be some rounding errors)
     total_after = sum(v["Weight_Percent"] for v in final.values())
     if total_after > 0 and abs(total_after - 100.0) > 1e-6:
         norm = 100.0 / total_after
         for t in final:
             final[t]["Weight_Percent"] = float(np.round(final[t]["Weight_Percent"] * norm, 5))
 
+# Return the completed portfolio from highest -> lowest weight
     return dict(sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True))
+
 
 def rebalance_currency_mix(final, target_ratio=0.5, tolerance=0.1):
     if not final:
