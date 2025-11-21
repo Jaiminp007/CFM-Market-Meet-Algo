@@ -465,16 +465,18 @@ so it's big enough to make a difference but small enough to not distort the allo
 Essentially, its to prevent the final portfolio from going above 100% after adding fees
 """
 
+# Adjusts daily returns to consider management fees (0.50% per year)
 def net_returns_after_mgmt_fee(daily_returns, annual_fee_bps=50):
-    fee_daily = annual_fee_bps / 10000.0 / 252.0
-    return daily_returns - fee_daily
+    fee_daily = annual_fee_bps / 10000.0 / 252.0 # Convert the annual fee to a daily one
+    return daily_returns - fee_daily # Finds net return by subtracting from daily returns
 
+# Gathers all the computed metrics and converts them into a score
 def score_calculate(valid_tickers):
-    x = score_data(valid_tickers)
-    final = {}
-    total_weight = 0.0
+    x = score_data(valid_tickers) # This contains the Beta, Correlation, Volatility, and stock's Sector
+    final = {} # Stores scores 
+    total_weight = 0.0 # Accumulates all the raw scores 
 
-    w1, w2, w3 = 0.45, 0.45, 0.1
+    w1, w2, w3 = 0.45, 0.45, 0.1 # Selected weights for beta, correlation, and volatility
 
     for ticker, m in x:
         beta = m['Beta']
