@@ -408,13 +408,14 @@ def market_cap_filtering(final, scored_data):
     if has_large and has_small: # If theres a large AND small market cap, return unchanged
         return final
 
-    # Dictionary of all scored stocks
+    # Dictionary of all scored stocks with valid market caps (Used for next 2 functions)
     scored_caps = {}
-    for t, m in scored_data:
-        mc = get_mc_in_cad(t)
-        if mc is not None:
+    for t, m in scored_data: # Loop through all tickers in scored_data
+        mc = get_mc_in_cad(t) # yfinance function that extracts marketCap
+        if mc is not None: # filter out all stocks with a missing/invalid market cap 
             scored_caps[t] = mc
 
+    # 
     if not has_large:
         candidates = [t for t, mc in scored_caps.items() if mc > 10_000_000_000]
         if candidates:
