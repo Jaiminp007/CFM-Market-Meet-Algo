@@ -66,8 +66,8 @@ def blended_benchmark(start, end):
 # Function that takes a list of valid tickers + sets time range
 
 def score_data(valid_tickers):
-    start="2025-05-15"
-    end="2025-11-15"
+    start="2024-11-15"
+    end="2025-05-15"
 
 # Retrieves the sector from yfinance 
     def get_sector_safe(ticker):
@@ -182,10 +182,10 @@ def add_defensive_layer(final, scored_data, defensive_ratio=0.05):
 
 # Sort the qualified stocks by correlation with benchmark and take the top 3
     defensives = sorted(
-        defensives,
-        key=lambda x: (x[1].get("Correlation") if pd.notna(x[1].get("Correlation")) else -np.inf),
-        reverse=True
-    )[:3]
+    defensives,
+    key=lambda x: (x[1].get("Correlation") if pd.notna(x[1].get("Correlation")) else 1.0),
+    reverse=False
+)[:5]
 
 # Makes a set for the 3 chosen stocks
     selected = {t for t, _ in defensives}
@@ -224,7 +224,7 @@ def add_defensive_layer(final, scored_data, defensive_ratio=0.05):
 # Make sure that the total portfolio still sums to exactly 100% (might be some rounding errors)
     total_after = sum(v["Weight_Percent"] for v in final.values())
     if total_after > 0 and abs(total_after - 100.0) > 1e-6:
-        norm = 100.0 / total_after
+        norm = 100 / total_after
         for t in final:
             final[t]["Weight_Percent"] = float(np.round(final[t]["Weight_Percent"] * norm, 5))
 
@@ -351,7 +351,7 @@ def enforce_min_weight(final):
     if not final:
         return final
     
-    n = len(final)
+    n = len(final)   
     min_weight = 100.0 / (2 * n)
     
     # Remove stocks below minimum weight
@@ -488,7 +488,7 @@ def score_calculate(valid_tickers):
     
     final = apply_risk_constraints(final, max_position=15.0, max_sector=40.0)
 
-    final = shrink_weights_for_fees(final, cash_buffer_bps=25)
+    final = shrink_weights_for_fees(final, cash_buffer_bps=0)
 
     return final
 
@@ -560,21 +560,37 @@ def save_stocks_csv(portfolio_df, group_number, directory="."):
     print(f"\nStocks CSV saved to: {filename}")
     return filename
 
+def calculate_actual_fees(portfolio_df, cad_per_usd=1.38):
+    """Calculate actual transaction fees based on assignment fee structure"""
+    total_fees_usd = 0.0
+
+    for _, row in portfolio_df.iterrows():
+        shares = row['Shares']
+        per_share_fee = shares * 0.001
+        fee = min(2.15, per_share_fee)
+        total_fees_usd += fee
+
+    total_fees_cad = total_fees_usd * cad_per_usd
+    return total_fees_cad
+
 def main():
-    tickers_list = read_csv("Tickers.csv")
+    tickers_list = read_csv("Test.csv")
     valid, invalid = check_ticker(tickers_list)
 
     final_portfolio = score_calculate(valid)
     
     print(f"Final portfolio contains {len(final_portfolio)} stocks\n")
     print(final_portfolio)
-    
-    # Account for fees (0.25% buffer already applied in shrink_weights_for_fees)
+
+    # Account for fees - calculate actual transaction fees
     TOTAL_PORTFOLIO_VALUE = 1000000  # $1M CAD
-    FEES_BPS = 25  # 0.25% = 25 basis points
-    available_to_invest = TOTAL_PORTFOLIO_VALUE * (1 - FEES_BPS/10000)
-    
-    # Create portfolio DataFrame
+
+    # First pass: estimate fees with initial portfolio
+    temp_portfolio_df = create_portfolio_dataframe(final_portfolio, TOTAL_PORTFOLIO_VALUE)
+    actual_fees = calculate_actual_fees(temp_portfolio_df)
+    available_to_invest = TOTAL_PORTFOLIO_VALUE - actual_fees
+
+    # Create final portfolio DataFrame with correct investment amount
     portfolio_df = create_portfolio_dataframe(final_portfolio, available_to_invest)
     
     # Display Portfolio_Final DataFrame
@@ -590,6 +606,7 @@ def main():
     
     print(f"\nTotal Portfolio Value: ${total_value:,.2f} CAD")
     print(f"Total Weight: {total_weight:.2f}%")
+    print(f"Transaction Fees: ${actual_fees:,.2f} CAD")
     print(f"Cash Reserve (fees): ${TOTAL_PORTFOLIO_VALUE - total_value:,.2f} CAD")
     print(f"Portfolio + Cash: ${total_value + (TOTAL_PORTFOLIO_VALUE - total_value):,.2f} CAD")
     
