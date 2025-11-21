@@ -324,7 +324,7 @@ def apply_risk_constraints(final, max_position=15.0, max_sector=40.0, max_iters=
 # Make sure portolio isn't bigger than 25 stocks or less than 10 stocks
 def limit_portfolio_size(final, max_size=25, min_size=10):
     if not final:
-        return final 
+        return final # If the portfolio is empty do nothing
         
     items = sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True) # Sorts a list ranking all stocks by weighting
     n = len(items) # Count how many tickers are in the portfolio
@@ -346,13 +346,13 @@ def limit_portfolio_size(final, max_size=25, min_size=10):
 
     return trimmed
 
-# Find the minimum weighting 
+# Find the minimum weighting for stocks 
 def enforce_min_weight(final):
     if not final:
         return final
     
     n = len(final)   
-    min_weight = 100.0 / (2 * n) # Find minimum weighting based on the 
+    min_weight = 100.0 / (2 * n) # Find minimum weighting based on the number of stocks
     
     # Remove stocks below minimum weight
     to_remove = [t for t, d in final.items() if d["Weight_Percent"] < min_weight]
@@ -360,47 +360,55 @@ def enforce_min_weight(final):
     for ticker in to_remove:
         del final[ticker]
     
-    # Renormalize if we removed anything
+    # Ensure that the weights sum to exactly 100% after removing stocks
     if to_remove:
         total = sum(v["Weight_Percent"] for v in final.values())
         if total > 0:
             norm = 100.0 / total
             for t in final:
                 final[t]["Weight_Percent"] = float(np.round(final[t]["Weight_Percent"] * norm, 5))
-    
+
+    # Return a dictionary that sorts from largest weight to smallest
     return dict(sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True))
 
-
+# Only keeps companies in the portfolio that are a reasonable size
 def market_cap_filtering(final, scored_data):
     if not final:
         return final
-
+# Conversion from CAD to USD
     CAD_PER_USD = 1.38
 
+    # Helper to get market cap in CAD
     def get_mc_in_cad(ticker):
         try:
-            info = yf.Ticker(ticker).get_info()
-            mc = info.get("marketCap", None)
+            info = yf.Ticker(ticker).get_info() 
+            mc = info.get("marketCap", None) # Get marketCap from tickers
             if mc is None:
-                return None
-            return mc if ticker.endswith(".TO") else mc * CAD_PER_USD
+                return None # If there is no marketCap, return None
+            return mc if ticker.endswith(".TO") else mc * CAD_PER_USD # If the market cap is CAD, leave it the same. If it's USD, convert to CAD currency
         except:
-            return None
+            return None # In case of API errors, return None
 
+    # Get the ticker's sector 
     def get_sector_of(t):
-        for tick, metrics in scored_data:
-            if tick == t:
-                return metrics.get("Sector", "Unknown")
-        return "Unknown"
+        for tick, metrics in scored_data: 
+            if tick == t: # if ticker is found in scored_data and has a sector, return it
+                return metrics.get("Sector", "Unknown") # otherwise, return "Unknown"
+        return "Unknown" # Run if the ticker is never found in scored_data
 
+    # Get market caps of all stocks in the portfolio
     caps = {t: get_mc_in_cad(t) for t in final}
 
+    # If there's at least a large market cap, set has_large to true
     has_large = any(mc and mc > 10_000_000_000 for mc in caps.values())
+    # If there's at least a small market cap, set has_small to true
+
     has_small = any(mc and mc < 2_000_000_000 for mc in caps.values())
 
-    if has_large and has_small:
+    if has_large and has_small: # If theres a large AND small market cap, return unchanged
         return final
 
+    # Dictionary of all scored stocks
     scored_caps = {}
     for t, m in scored_data:
         mc = get_mc_in_cad(t)
