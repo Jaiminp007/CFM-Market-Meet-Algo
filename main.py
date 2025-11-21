@@ -443,14 +443,27 @@ Note that we kept newly added large/small market caps at weighting 0
 This is because future functions will naturally adjust them to a proper weighting later on
 """
 
+# Create a small buffer by shrinking all portfolio weights slightly (0.25%)
+# 0.25% was chosen as its a typical industry assumption to rebalance a buffer
 def shrink_weights_for_fees(final, cash_buffer_bps=25):
     if not final:
         return final
-    buffer_pct = cash_buffer_bps / 100.0
-    scale = (100.0 - buffer_pct) / 100.0
+    buffer_pct = cash_buffer_bps / 100.0  
+    scale = (100.0 - buffer_pct) / 100.0 # Calculate how much to shrink everything by
+
+    # Using the scale, reduce the entire portfolio to the required weighting
     for t in final:
         final[t]["Weight_Percent"] = float(np.round(final[t]["Weight_Percent"] * scale, 5))
+    # Sort tickers by weight and return
     return dict(sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True))
+
+"""
+shrink_weights_for_fees does NOT calculate the precise amount we need to reduce for fees
+Instead, it uses a typical buffer size (which are often between .10% and .50%)
+so it's big enough to make a difference but small enough to not distort the allocations.
+
+Essentially, its to prevent the final portfolio from going above 100% after adding fees
+"""
 
 def net_returns_after_mgmt_fee(daily_returns, annual_fee_bps=50):
     fee_daily = annual_fee_bps / 10000.0 / 252.0
