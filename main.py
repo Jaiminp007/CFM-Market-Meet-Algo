@@ -352,7 +352,7 @@ def enforce_min_weight(final):
         return final
     
     n = len(final)   
-    min_weight = 100.0 / (2 * n)
+    min_weight = 100.0 / (2 * n) # Find minimum weighting based on the 
     
     # Remove stocks below minimum weight
     to_remove = [t for t, d in final.items() if d["Weight_Percent"] < min_weight]
@@ -369,6 +369,7 @@ def enforce_min_weight(final):
                 final[t]["Weight_Percent"] = float(np.round(final[t]["Weight_Percent"] * norm, 5))
     
     return dict(sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True))
+
 
 def market_cap_filtering(final, scored_data):
     if not final:
