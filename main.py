@@ -346,7 +346,7 @@ def limit_portfolio_size(final, max_size=25, min_size=10):
 
     return trimmed
 
-# 
+# Find the minimum weighting 
 def enforce_min_weight(final):
     if not final:
         return final
