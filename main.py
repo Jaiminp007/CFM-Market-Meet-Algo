@@ -478,35 +478,46 @@ def score_calculate(valid_tickers):
 
     w1, w2, w3 = 0.45, 0.45, 0.1 # Selected weights for beta, correlation, and volatility
 
-    for ticker, m in x:
+    for ticker, m in x: # Loop through all the metrics for each stock
         beta = m['Beta']
         corr = m['Correlation']
-        sigma_rel = m['Sigma_Rel']
-        
+        sigma_rel = m['Sigma_Rel'] # Note that sigma_rel is the comparison between the stock's volatility and the benchmark volatility
+
+        # This stretches the sigma_rel ratio (which is normally between 0-1) into a larger range
+        # This enhances accuracy when measuring volatility (volatility differences are more apparent)
         vol_ratio = sigma_rel / (1 - sigma_rel) if sigma_rel < 1 else 1.0
-        
+
+        # Formula to calculate the Euclidian distance from an idea stock
+        # A smaller distance = higher score
         distance = np.sqrt(
+
             w1 * (beta - 1) ** 2 +
             w2 * (1 - corr) ** 2 +
             w3 * (vol_ratio - 1) ** 2
         )
 
-        score = 1 / (1 + distance)
+        score = 1 / (1 + distance) # Smaller distances are converted to larger scores, and vice versa
 
-        if not np.isfinite(score):
+        # Ignore NaN/infinte scores
+        if not np.isfinite(score): 
             continue
 
+        # The raw score temporarily acts as the weighting
         weight = score
         total_weight += weight
 
+        # Store results
         final[ticker] = [float(np.round(score, 5)), m['Sector']]
 
+    # Finally, we loop through all the stocks kept after scoring
     for i in final:
-        score_value = final[i][0]
-        weight_in_percent = (score_value / total_weight) * 100 if total_weight != 0 else 0.0
-        final[i].append(float(np.round(weight_in_percent, 5)))
+        score_value = final[i][0] # Retrieve raw scores 
+        weight_in_percent = (score_value / total_weight) * 100 if total_weight != 0 else 0.0 # This converts the raw weighting into a percentage that adds up to 100% 
+        # If the scores fail somehow, weights are set to 0 instead of leaving an error
+        final[i].append(float(np.round(weight_in_percent, 5))) #Finally, attach each weighting with each stock
+        
 
-
+# We run every stock through ALL the helper functions that were made previously
     final = filter_out_low_weight_stocks(final)
 
     final = add_defensive_layer(final, x, defensive_ratio=0.05)
@@ -525,44 +536,49 @@ def score_calculate(valid_tickers):
 
     return final
 
-
+# Transforms all the finalized data into a portfolio
 def create_portfolio_dataframe(final_portfolio, total_value_cad=1000000):
-    """Create the final portfolio DataFrame with all required columns"""
+    # We make a portfolio with the size of $1,000,000 CAD by default
     
-    CAD_PER_USD = 1.38
+    CAD_PER_USD = 1.38 # Conversion rate
     
     portfolio_data = []
-    
+
+    # Loop through each ticker for the portfolio
     for ticker, data in final_portfolio.items():
-        # Get current price
+        # We should be gathering the latest price
         try:
             stock = yf.Ticker(ticker)
             info = stock.get_info()
-            price = info.get('currentPrice') or info.get('regularMarketPrice')
-            
+            price = info.get('currentPrice') or info.get('regularMarketPrice') # If the currentPrice is missing we use regularMarketPrice
+
+            # If the price is still missing, take the last 5 days of price data
             if price is None:
                 hist = stock.history(period="5d")
-                if not hist.empty:
+                if not hist.empty: # If that STILL doesn't exist, take the last recorded price
                     price = hist['Close'].iloc[-1]
-                else:
+                else: 
                     continue
+            # If all else fails, move on and skip the ticker
         except:
             continue
         
         # Determine currency
         currency = "CAD" if ticker.endswith(".TO") else "USD"
         
-        # Calculate allocation in CAD
+        # Convert the weight % to a decimal
         weight_decimal = data['Weight_Percent'] / 100
+        # Then we use the weighting to find a dollar value we invest for said stock
         allocation_cad = total_value_cad * weight_decimal
         
         # Convert to appropriate currency for shares calculation
         if currency == "USD":
-            allocation_in_currency = allocation_cad / CAD_PER_USD
-        else:
+            allocation_in_currency = allocation_cad / CAD_PER_USD # Change the currency to USD if it's a US stock
+        # Otherwise keep it the same (it's a canadian stock)
+        else: 
             allocation_in_currency = allocation_cad
         
-        # Calculate shares
+        # Calculate shares to buy given the investment in the stock
         shares = round(allocation_in_currency / price, 4)
         
         # Calculate actual value in original currency
@@ -570,7 +586,8 @@ def create_portfolio_dataframe(final_portfolio, total_value_cad=1000000):
         
         # Convert value to CAD
         value_cad = value_in_currency if currency == "CAD" else value_in_currency * CAD_PER_USD
-        
+
+        # Append all the info
         portfolio_data.append({
             'Ticker': ticker,
             'Price': round(price, 2),
@@ -579,19 +596,24 @@ def create_portfolio_dataframe(final_portfolio, total_value_cad=1000000):
             'Value': round(value_cad, 2),
             'Weight': round(data['Weight_Percent'], 2)
         })
-    
+
+    # Finally, we convert it all into a nice, clean pandas table
     df = pd.DataFrame(portfolio_data)
     df.index = range(1, len(df) + 1)
     
     return df
 
+# We take the final portfolio, and only save the ticker and the number of Shares to buy into a CSV file
+
 def save_stocks_csv(portfolio_df, group_number, directory="."):
     """Save Ticker and Shares to CSV"""
-    stocks_df = portfolio_df[['Ticker', 'Shares']].copy()
-    filename = f"{directory}/Stocks_Group_{group_number:02d}.csv"
-    stocks_df.to_csv(filename, index=False)
+    stocks_df = portfolio_df[['Ticker', 'Shares']].copy() # Extracting only tickers and shares
+    filename = f"{directory}/Stocks_Group_{group_number:02d}.csv" # Make file name
+    stocks_df.to_csv(filename, index=False) # Save csv
     print(f"\nStocks CSV saved to: {filename}")
     return filename
+
+
 
 def calculate_actual_fees(portfolio_df, cad_per_usd=1.38):
     """Calculate actual transaction fees based on assignment fee structure"""
