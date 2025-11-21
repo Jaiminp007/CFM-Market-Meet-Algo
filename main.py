@@ -279,59 +279,74 @@ def rebalance_currency_mix(final, target_ratio=0.5, tolerance=0.1):
     # Return the final dictionary by weightings
     return dict(sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True))
 
+# Makes sure the portfolio doesn't break the rules
 def apply_risk_constraints(final, max_position=15.0, max_sector=40.0, max_iters=50):
     if not final:
-        return final
+        return final #Nothing in the portfolio? Skip it
+
+    # Loop through until all rules are fulfilled 
     for _ in range(max_iters):
         changed = False
 
+        # Loop through all stocks to make sure they take up max 15%
         for t, d in final.items():
             if d["Weight_Percent"] > max_position:
                 d["Weight_Percent"] = float(np.round(max_position, 5))
-                changed = True
+                changed = True # Report that something in the portfolio was fixed - loop again
+
+        # Builds a dictionary with weight for each sector
         sector_totals = {}
         for t, d in final.items():
             s = d.get("Sector", "Unknown")
             sector_totals[s] = sector_totals.get(s, 0.0) + d["Weight_Percent"]
 
+        # Check if sector weights exceed 40%
         for s, tot in sector_totals.items():
             if tot > max_sector:
-                scale = max_sector / tot
+                scale = max_sector / tot #If they do, shrink them using this variable
                 for t, d in final.items():
                     if d.get("Sector", "Unknown") == s:
-                        d["Weight_Percent"] = float(np.round(d["Weight_Percent"] * scale, 5))
-                        changed = True
+                        d["Weight_Percent"] = float(np.round(d["Weight_Percent"] * scale, 5)) # Apply the scale variable to all the stocks in that sector
+                        changed = True # Report a change has been made to the portfolio - Loop again
 
         total_w = sum(v["Weight_Percent"] for v in final.values())
-        if total_w > 0 and abs(total_w - 100.0) > 1e-6:
-            norm = 100.0 / total_w
+        if total_w > 0 and abs(total_w - 100.0) > 1e-6:         # If the total isn't exactly 100%, adjust 
+            norm = 100.0 / total_w # Scale factor to fix the portfolio
             for t in final:
-                final[t]["Weight_Percent"] = float(np.round(final[t]["Weight_Percent"] * norm, 5))
-            changed = True
+                final[t]["Weight_Percent"] = float(np.round(final[t]["Weight_Percent"] * norm, 5)) # Apply the change to all weights
+            changed = True # Report something changed
 
-        if not changed:
+        if not changed: # If no more rules have been violated, break the loop
             break
 
-    return dict(sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True))
+    return dict(sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True)) # Sort stocks by weight from highest to lowest
 
+# Make sure portolio isn't bigger than 25 stocks or less than 10 stocks
 def limit_portfolio_size(final, max_size=25, min_size=10):
     if not final:
-        return final
-    items = sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True)
-    n = len(items)
-    if n <= max_size:
+        return final 
+        
+    items = sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True) # Sorts a list ranking all stocks by weighting
+    n = len(items) # Count how many tickers are in the portfolio
+   
+    if n <= max_size: # If n is <= 25, leave everything as is
         return dict(items)
-    trimmed = dict(items[:max_size])
+    trimmed = dict(items[:max_size]) # Otherwise, only keep the top 25 tickers
+   
+    # Adjust the portfolio so it sums to exactly 100%
     total = sum(v["Weight_Percent"] for v in trimmed.values())
     if total > 0:
         norm = 100.0 / total
         for t in trimmed:
             trimmed[t]["Weight_Percent"] = float(np.round(trimmed[t]["Weight_Percent"] * norm, 5))
+
+    # Run the previous helpers to make sure the trimmed portfolio doesn't violate prior rules
     trimmed = apply_risk_constraints(trimmed, max_position=15.0, max_sector=40.0)
     trimmed = rebalance_currency_mix(trimmed)
 
     return trimmed
 
+# 
 def enforce_min_weight(final):
     if not final:
         return final
@@ -544,7 +559,6 @@ def save_stocks_csv(portfolio_df, group_number, directory="."):
     stocks_df.to_csv(filename, index=False)
     print(f"\nStocks CSV saved to: {filename}")
     return filename
-
 
 def main():
     tickers_list = read_csv("Tickers.csv")
