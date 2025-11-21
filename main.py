@@ -67,7 +67,7 @@ def blended_benchmark(start, end):
 
 def score_data(valid_tickers):
     start="2024-11-15"
-    end="2025-05-15"
+    end="2025-11-15"
 
 # Retrieves the sector from yfinance 
     def get_sector_safe(ticker):
@@ -96,8 +96,8 @@ def score_data(valid_tickers):
         bench_vol_ann = bench.std() * np.sqrt(252) # If the value is invalid, it's replaced with np.nan
    
     # Sets the number of days in the rolling window (as we have a rolling beta and rolling correlation)
-    # to roughly 3 trading months
-    window = 63 
+    # to roughly 1 trading month
+    window = 30
 
 
     # Looping through all valid tickers and extracting daily returns
@@ -158,7 +158,7 @@ def filter_out_low_weight_stocks(final_stocks):
                        reverse=True))
 
 # Function that finds low-beta/low-volatility stocks to reduce risk for the portfolio in case the market drops
-def add_defensive_layer(final, scored_data, defensive_ratio=0.05):
+def add_defensive_layer(final, scored_data, defensive_ratio=0):
     if not final:
         return final # Stops the function if the portfolio is empty (no portfolio to modify)
 
@@ -445,7 +445,7 @@ This is because future functions will naturally adjust them to a proper weightin
 
 # Create a small buffer by shrinking all portfolio weights slightly (0.25%)
 # 0.25% was chosen as its a typical industry assumption to rebalance a buffer
-def shrink_weights_for_fees(final, cash_buffer_bps=25):
+"""def shrink_weights_for_fees(final, cash_buffer_bps=25):
     if not final:
         return final
     buffer_pct = cash_buffer_bps / 100.0  
@@ -455,7 +455,10 @@ def shrink_weights_for_fees(final, cash_buffer_bps=25):
     for t in final:
         final[t]["Weight_Percent"] = float(np.round(final[t]["Weight_Percent"] * scale, 5))
     # Sort tickers by weight and return
-    return dict(sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True))
+    return dict(sorted(final.items(), key=lambda kv: kv[1]["Weight_Percent"], reverse=True))"""
+
+
+
 
 """
 shrink_weights_for_fees does NOT calculate the precise amount we need to reduce for fees
@@ -465,18 +468,13 @@ so it's big enough to make a difference but small enough to not distort the allo
 Essentially, its to prevent the final portfolio from going above 100% after adding fees
 """
 
-# Adjusts daily returns to consider management fees (0.50% per year)
-def net_returns_after_mgmt_fee(daily_returns, annual_fee_bps=50):
-    fee_daily = annual_fee_bps / 10000.0 / 252.0 # Convert the annual fee to a daily one
-    return daily_returns - fee_daily # Finds net return by subtracting from daily returns
-
 # Gathers all the computed metrics and converts them into a score
 def score_calculate(valid_tickers):
     x = score_data(valid_tickers) # This contains the Beta, Correlation, Volatility, and stock's Sector
     final = {} # Stores scores 
     total_weight = 0.0 # Accumulates all the raw scores 
 
-    w1, w2, w3 = 0.45, 0.45, 0.1 # Selected weights for beta, correlation, and volatility
+    w1, w2, w3 = 0.20, 0.70, 0.1 # Selected weights for beta, correlation, and volatility
 
     for ticker, m in x: # Loop through all the metrics for each stock
         beta = m['Beta']
@@ -520,19 +518,19 @@ def score_calculate(valid_tickers):
 # We run every stock through ALL the helper functions that were made previously
     final = filter_out_low_weight_stocks(final)
 
-    final = add_defensive_layer(final, x, defensive_ratio=0.05)
-
-    final = rebalance_currency_mix(final)
-
     final = market_cap_filtering(final, x)
+
+    final = add_defensive_layer(final, x, defensive_ratio=0)
 
     final = limit_portfolio_size(final, max_size=25, min_size=10)
 
     final = enforce_min_weight(final)
-    
+
     final = apply_risk_constraints(final, max_position=15.0, max_sector=40.0)
 
-    final = shrink_weights_for_fees(final, cash_buffer_bps=0)
+    final = rebalance_currency_mix(final)
+
+    #final = shrink_weights_for_fees(final, cash_buffer_bps=0)
 
     return final
 
@@ -630,7 +628,7 @@ def calculate_actual_fees(portfolio_df, cad_per_usd=1.38):
 # Reads the tickers, filters them, scores them, builds a risk-balanced portfolio, 
 # calculates fees, adjusts final weights, generates share counts, outputs the final portfolio, and saves a CSV 
 def main():
-    tickers_list = read_csv("Tickers2.csv")
+    tickers_list = read_csv("Tickers.csv")
     valid, invalid = check_ticker(tickers_list)
 
     final_portfolio = score_calculate(valid)
