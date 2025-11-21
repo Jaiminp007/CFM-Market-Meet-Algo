@@ -613,21 +613,22 @@ def save_stocks_csv(portfolio_df, group_number, directory="."):
     print(f"\nStocks CSV saved to: {filename}")
     return filename
 
-# This finds the actual transaction fees 
+# This finds the actual transaction fees based on fee rules
 
 def calculate_actual_fees(portfolio_df, cad_per_usd=1.38):
-    """Calculate actual transaction fees based on assignment fee structure"""
     total_fees_usd = 0.0
 
     for _, row in portfolio_df.iterrows():
         shares = row['Shares']
-        per_share_fee = shares * 0.001
-        fee = min(2.15, per_share_fee)
-        total_fees_usd += fee
+        per_share_fee = shares * 0.001 # Shares either cost 0.001 a share or a maximum of $2.15
+        fee = min(2.15, per_share_fee) # Whichever fee is lower
+        total_fees_usd += fee # Fees added in USD and converts to CAD
 
     total_fees_cad = total_fees_usd * cad_per_usd
     return total_fees_cad
 
+# Reads the tickers, filters them, scores them, builds a risk-balanced portfolio, 
+# calculates fees, adjusts final weights, generates share counts, outputs the final portfolio, and saves a CSV 
 def main():
     tickers_list = read_csv("Tickers2.csv")
     valid, invalid = check_ticker(tickers_list)
