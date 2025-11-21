@@ -415,25 +415,33 @@ def market_cap_filtering(final, scored_data):
         if mc is not None: # filter out all stocks with a missing/invalid market cap 
             scored_caps[t] = mc
 
-    # 
+    # If there's no large market-cap, add one
     if not has_large:
-        candidates = [t for t, mc in scored_caps.items() if mc > 10_000_000_000]
-        if candidates:
-            t = candidates[0]
-            final[t] = {"Score": 0.5, "Weight_Percent": 0.0, "Sector": get_sector_of(t)}
+        candidates = [t for t, mc in scored_caps.items() if mc > 10_000_000_000] # filter through candidates for large market caps
+        if candidates: 
+            t = candidates[0] # if there are candidates, pick the first one in the list (scored_data is already ordered)
+            final[t] = {"Score": 0.5, "Weight_Percent": 0.0, "Sector": get_sector_of(t)} # assign a weighting of 0 and a neutral score of 0.5 (will be adjusted later on)
 
+    # Do essentially the same thing as has_large, except for small market-caps
     if not has_small:
         candidates = [t for t, mc in scored_caps.items() if mc < 2_000_000_000]
         if candidates:
             t = candidates[0]
             final[t] = {"Score": 0.5, "Weight_Percent": 0.0, "Sector": get_sector_of(t)}
 
+    # Compute sum of all weights
     total = sum(v["Weight_Percent"] for v in final.values())
-    if total > 0:
+    if total > 0: # Avoid division by 0
+        # Adjust all weights to everything totals 100% exactly
         for t in final:
             final[t]["Weight_Percent"] = round(final[t]["Weight_Percent"] * (100 / total), 5)
 
     return final
+
+"""
+Note that we kept newly added large/small market caps at weighting 0
+This is because future functions will naturally adjust them to a proper weighting later on
+"""
 
 def shrink_weights_for_fees(final, cash_buffer_bps=25):
     if not final:
