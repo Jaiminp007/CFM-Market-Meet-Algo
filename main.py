@@ -613,7 +613,7 @@ def save_stocks_csv(portfolio_df, group_number, directory="."):
     print(f"\nStocks CSV saved to: {filename}")
     return filename
 
-
+# This finds the actual transaction fees 
 
 def calculate_actual_fees(portfolio_df, cad_per_usd=1.38):
     """Calculate actual transaction fees based on assignment fee structure"""
