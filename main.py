@@ -574,12 +574,11 @@ def calculate_actual_fees(portfolio_df, cad_per_usd=1.38):
     return total_fees_cad
 
 def main():
-    tickers_list = read_csv("Test.csv")
+    tickers_list = read_csv("Tickers2.csv")
     valid, invalid = check_ticker(tickers_list)
 
     final_portfolio = score_calculate(valid)
-    
-    print(f"Final portfolio contains {len(final_portfolio)} stocks\n")
+
     print(final_portfolio)
 
     # Account for fees - calculate actual transaction fees
@@ -594,27 +593,21 @@ def main():
     portfolio_df = create_portfolio_dataframe(final_portfolio, available_to_invest)
     
     # Display Portfolio_Final DataFrame
-    print("="*80)
     print("PORTFOLIO_FINAL")
-    print("="*80)
-    print(portfolio_df.to_string())
-    print("\n" + "="*80)
+    print()
+    print(portfolio_df)
     
     # Calculate actual totals
     total_value = portfolio_df['Value'].sum()
     total_weight = portfolio_df['Weight'].sum()
+
+    save_stocks_csv(portfolio_df, 13)
     
     print(f"\nTotal Portfolio Value: ${total_value:,.2f} CAD")
     print(f"Total Weight: {total_weight:.2f}%")
     print(f"Transaction Fees: ${actual_fees:,.2f} CAD")
     print(f"Cash Reserve (fees): ${TOTAL_PORTFOLIO_VALUE - total_value:,.2f} CAD")
     print(f"Portfolio + Cash: ${total_value + (TOTAL_PORTFOLIO_VALUE - total_value):,.2f} CAD")
-    
-    # Save stocks CSV
-    save_stocks_csv(portfolio_df, 13)
-    
-    # Save full portfolio to CSV as well (optional)
-    portfolio_df.to_csv(f"Portfolio_Group_{13:02d}.csv")
-    print(f"Full portfolio saved to: Portfolio_Group_{13:02d}.csv")
+    print()
 if __name__ == "__main__":
     main()
