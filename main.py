@@ -8,6 +8,9 @@ import yfinance as yf
 import matplotlib.pyplot as plt
 import random
 from datetime import datetime
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning, message="Calling float on a single element Series is deprecated*")
+
 
 # Obtain latest USD to CAD conversion rate
 fx = yf.download("USDCAD=X", period="5d")["Close"].dropna()
@@ -76,49 +79,6 @@ def blended_benchmark(start, end):
     return returns.rename("Benchmark")
 
 
-
-compare = yf.download(["NIO", "^GSPC", "^GSPTSE"], start="2024-11-18", end="2025-11-18", auto_adjust=True)["Close"]
-nio_price = compare["NIO"].dropna()
-
-benchmark = blended_benchmark("2024-11-18", "2025-11-18")
-benchmark_index = (1 + benchmark).cumprod()
-
-# The benchmark is scaled to match NIO's starting price, as we only care about their relative movements.
-nio_start = nio_price.iloc[0]
-benchmark_scaled = benchmark_index * nio_price.iloc[0]
-
-plt.figure(figsize=(7, 4.5))
-plt.plot(nio_price, label="NIO Price", lw=2)
-plt.plot(benchmark_scaled, label="Blended Benchmark (Scaled)", lw=2)
-plt.title("NIO vs. Blended Benchmark Price Movement for a 1-Year Window")
-plt.ylabel("Price")
-plt.legend()
-
-# Calculates NIO's beta and correlation to the blended benchmark
-nio_returns = compare["NIO"].pct_change().dropna()
-aligned = pd.concat([nio_returns, benchmark], axis=1).dropna()
-aligned.columns = ["NIO_Returns", "Benchmark"]
-
-beta = aligned["NIO_Returns"].cov(aligned["Benchmark"]) / aligned["Benchmark"].var()
-correlation = aligned["NIO_Returns"].corr(aligned["Benchmark"])
-
-print("NIO 1-year beta:", np.round(beta, 3))
-print("NIO 1-year correlation:", np.round(correlation, 3))
-
-data = yf.download(["^GSPC", "^GSPTSE"], start="2025-05-15", end="2025-11-15")["Close"]
-
-rets = data.pct_change(fill_method=None).dropna()
-bench = rets.mean(axis=1)
-
-plt.figure(figsize=(8,4.5))
-plt.plot(bench.index, bench.cumsum())
-plt.title("Benchmark Movement (May 15, 2025 – Nov 15, 2025)")
-plt.xlabel("Date")
-plt.ylabel("Cumulative Return")
-plt.grid(True)
-
-volatility = bench.std()*np.sqrt(252)
-print("Annualized Benchmark Volatility: ", round(volatility*100, 3), "%", sep='')
 
 
 # Function that takes a list of valid tickers + sets time range
